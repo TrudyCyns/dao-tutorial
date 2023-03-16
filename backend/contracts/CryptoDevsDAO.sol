@@ -44,6 +44,12 @@ contract CryptoDevsDAO is Ownable {
         mapping(uint256 => bool) voters;
     }
 
+    // Create an enum representing the 2 possible options in a vote.
+    enum Vote {
+        YAY, // YAY = 1
+        NAY // YAY = 0
+    }
+
     // Create a mapping for ID to proposal
     mapping(uint256 => Proposal) public proposals;
     // Number of Proposals created
@@ -69,6 +75,16 @@ contract CryptoDevsDAO is Ownable {
         _;
     }
 
+    // Create a modifier to ensure the proposal being voted on has not exceeded its deadline.
+    // It takes a parameter.
+    modifier activeProposalOnly(uint256 proposalIndex) {
+        require(
+            proposals[proposalIndex].deadline > block.timestamp,
+            "DEADLINE_EXCEEDED"
+        );
+        _;
+    }
+
     /// @dev createProposal allows a CryptoDevsNFT holder to create a new proposal in the DAO
     /// @param _nftTokenId - the tokenID of the NFT to be purchased from FakeNFTMarketplace if this proposal passes
     /// @return Returns the proposal index for the newly created proposal
@@ -86,9 +102,34 @@ contract CryptoDevsDAO is Ownable {
         return numProposals - 1;
     }
 
-    // allow holders if the CryptoDevs NFT to create new proposals
+    /// @dev voteOnProposal allows a CryptoDevsNFT holder to cast their vote on an active proposal
+    /// @param proposalIndex - the index of the proposal to vote on in the proposals array
+    /// @param vote - the type of vote they want to cast
+    function voteOnProposal(
+        uint256 proposalIndex,
+        Vote vote
+    ) external nftHolderOnly activeProposalOnly(proposalIndex) {
+        Proposal storage proposal = proposals[proposalIndex];
 
-    // allow holders of CryptoDevs NFT to vote on prposals if they havent voted already and the deadline hasn't passed yet either.abi
+        uint256 voterNFTBalance = cryptoDevsNFT.balanceOf(msg.sender);
+        uint256 numVotes = 0;
+
+        // Calculate how many NFTs are owned by the voter that haven't already been used to vote
+        for (uint i = 0; i < voterNFTBalance; i++) {
+            uint256 tokenId = cryptoDevsNFT.tokenOfOwnerByIndex(msg.sender, i);
+            if (proposal.voters[tokenId] == false) {
+                numVotes++;
+                proposal.voters[tokenId] = true;
+            }
+        }
+        require(numVotes > 0, "ALREADY_VOTED");
+
+        if (vote == Vote.YAY) {
+            proposal.yayVotes += numVotes;
+        } else {
+            proposal.nayVotes += numVotes;
+        }
+    }
 
     // allow holders of CryptoDevs NFT to eecute a proposal after its deadline jas been exceeded, triggering an NFT purchase if it passed.
 }
