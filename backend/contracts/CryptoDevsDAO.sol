@@ -85,6 +85,16 @@ contract CryptoDevsDAO is Ownable {
         _;
     }
 
+    // Create a modifier to check if deadline has exceeded
+    // It also takes a parameter
+    modifier inactiveProposalOnly(uint256 proposalIndex) {
+        require(
+            proposals[proposalIndex].deadline <= block.timestamp,
+            "DEADLINE_NOT_EXCEEDED"
+        );
+        _;
+    }
+
     /// @dev createProposal allows a CryptoDevsNFT holder to create a new proposal in the DAO
     /// @param _nftTokenId - the tokenID of the NFT to be purchased from FakeNFTMarketplace if this proposal passes
     /// @return Returns the proposal index for the newly created proposal
@@ -131,5 +141,21 @@ contract CryptoDevsDAO is Ownable {
         }
     }
 
-    // allow holders of CryptoDevs NFT to eecute a proposal after its deadline jas been exceeded, triggering an NFT purchase if it passed.
+    /// @dev executeProposal allows any CryptoDevsNFT holder to execute a proposal after it's deadline has been exceeded
+    /// @param proposalIndex - the index of the proposal to execute in the proposals array
+    function executeProposal(
+        uint256 proposalIndex
+    ) external nftHolderOnly inactiveProposalOnly(proposalIndex) {
+        Proposal storage proposal = proposals[proposalIndex];
+
+        // Chech if the proposal has more YAY or more NAY votes. React accordingly
+        if (proposal.yayVotes > proposal.nayVotes) {
+            uint256 nftPrice = nftMarketplace.getPrice();
+            require(address(this).balance >= nftPrice, "NOT_ENOUGH_FUNDS");
+            nftMarketplace.purchase{value: nftPrice}(proposal.nftTokenId);
+        }
+        proposal.executed = true;
+    }
+
+    
 }
