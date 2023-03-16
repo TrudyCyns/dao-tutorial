@@ -33,22 +33,48 @@ interface ICryptoDevsNFT {
     ) external view returns (uint256);
 }
 
-// Create a struct containing all relevant info
-struct Proposal {
-  uint256 nftTokenId;
-  uint256 deadline;
-  uint256 yayVotes;
-  uint256 nayVotes;
-  bool executed;
-  mapping (uint256 => bool) voters;
+contract CryptoDevsDAO is Ownable {
+    // Create a struct containing all relevant info
+    struct Proposal {
+        uint256 nftTokenId;
+        uint256 deadline;
+        uint256 yayVotes;
+        uint256 nayVotes;
+        bool executed;
+        mapping(uint256 => bool) voters;
+    }
+
+    // Create a mapping for ID to proposal
+    mapping(uint256 => Proposal) public proposals;
+    // Number of Proposals created
+    uint256 public numProposals;
+
+    // Create Variables for the interfaces
+    IFakeNFTMarketplace nftMarketplace;
+    ICryptoDevsNFT cryptoDevsNFT;
+
+    /**
+     * Create a payable constructor which initializes the contract
+     * instances for FakeNFTMarketplace and CryptoDevsNFT
+     * The payable allows this constructor to accept an ETH deposit when it is being deployed
+     */
+    constructor(address _nftMarketplace, address _cryptoDevsNFT) payable {
+        nftMarketplace = IFakeNFTMarketplace(_nftMarketplace);
+        cryptoDevsNFT = ICryptoDevsNFT(_cryptoDevsNFT);
+    }
+
+    // Create a modifier to ensure only those that own a CryptoDevs NFT participate.
+    modifier nftHolderOnly() {
+      require(cryptoDevsNFT.balanceOf(msg.sender) > 0, "NOT_A_DAO_MEMBER");
+      _;
+    }
+
+
+    // Store creates proposals in contract state
+
+    // allow holders if the CryptoDevs NFT to create new proposals
+
+    // allow holders of CryptoDevs NFT to vote on prposals if they havent voted already and the deadline hasn't passed yet either.abi
+
+    // allow holders of CryptoDevs NFT to eecute a proposal after its deadline jas been exceeded, triggering an NFT purchase if it passed.
 }
-
-// Store creates proposals in contract state
-
-// allow holders if the CryptoDevs NFT to create new proposals
-
-// allow holders of CryptoDevs NFT to vote on prposals if they havent voted already and the deadline hasn't passed yet either.abi
-
-// allow holders of CryptoDevs NFT to eecute a proposal after its deadline jas been exceeded, triggering an NFT purchase if it passed.
-
-contract CryptoDevsDAO is Ownable {}
